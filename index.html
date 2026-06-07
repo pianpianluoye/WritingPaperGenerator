@@ -1,0 +1,611 @@
+<!doctype html>
+<html lang="zh">
+  <head>
+    <meta charset="UTF-8" />
+    <title>作文稿纸生成器</title>
+
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+
+        padding: 20px;
+
+        background: #eef2e6;
+
+        font-family: "KaiTi", "STKaiti", serif;
+      }
+
+      /* =========================
+              控制面板
+          ========================= */
+
+      .toolbar {
+        width: 900px;
+
+        margin: 0 auto 30px;
+
+        background: white;
+
+        padding: 25px 30px;
+
+        border-radius: 12px;
+
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      }
+
+      .toolbar h2 {
+        margin-top: 0;
+      }
+
+      .toolbar label {
+        display: block;
+
+        margin-top: 12px;
+
+        font-size: 16px;
+      }
+
+      .toolbar input,
+      .toolbar textarea {
+        width: 100%;
+
+        margin-top: 6px;
+
+        padding: 10px 14px;
+
+        font-size: 16px;
+
+        font-family: inherit;
+
+        border: 2px solid #e0e0e0;
+
+        border-radius: 8px;
+
+        outline: none;
+
+        transition:
+          border-color 0.3s ease,
+          box-shadow 0.3s ease;
+      }
+
+      .toolbar input:focus,
+      .toolbar textarea:focus {
+        border-color: #4a90d9;
+
+        box-shadow: 0 0 0 3px rgba(74, 144, 217, 0.1);
+      }
+
+      .toolbar textarea {
+        resize: vertical;
+
+        min-height: 120px;
+      }
+
+      .toolbar input[type="color"] {
+        padding: 2px;
+
+        cursor: pointer;
+      }
+
+      .toolbar .row {
+        display: flex;
+
+        gap: 20px;
+      }
+
+      .toolbar .row > div {
+        flex: 1;
+      }
+
+      button {
+        margin-top: 20px;
+
+        padding: 12px 30px;
+
+        font-size: 16px;
+
+        font-weight: 500;
+
+        cursor: pointer;
+
+        border: none;
+
+        border-radius: 8px;
+
+        background: linear-gradient(135deg, #4a90d9 0%, #357abd 100%);
+
+        color: white;
+
+        box-shadow: 0 4px 12px rgba(74, 144, 217, 0.3);
+
+        transition: all 0.3s ease;
+
+        margin-right: 12px;
+      }
+
+      button:hover {
+        background: linear-gradient(135deg, #357abd 0%, #2d6aa0 100%);
+
+        box-shadow: 0 6px 16px rgba(74, 144, 217, 0.4);
+
+        transform: translateY(-1px);
+      }
+
+      button:active {
+        transform: translateY(0);
+
+        box-shadow: 0 2px 8px rgba(74, 144, 217, 0.3);
+      }
+
+      /* =========================
+              页面区域
+          ========================= */
+
+      #pages {
+        display: flex;
+
+        flex-direction: column;
+
+        align-items: center;
+
+        gap: 40px;
+      }
+
+      /* =========================
+              每页
+          ========================= */
+
+      .paper {
+        width: 210mm;
+
+        height: 297mm;
+
+        background: white;
+
+        position: relative;
+
+        overflow: hidden;
+
+        box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+      }
+
+      /* =========================
+              标题
+          ========================= */
+
+      .title {
+        position: absolute;
+
+        top: 45px;
+
+        left: 0;
+
+        width: 100%;
+
+        text-align: center;
+
+        font-size: 34px;
+
+        font-weight: bold;
+
+        letter-spacing: 8px;
+      }
+
+      .page-number {
+        position: absolute;
+
+        bottom: 30px;
+
+        left: 50%;
+
+        transform: translateX(-50%);
+
+        font-size: 16px;
+
+        color: #666;
+      }
+
+      /* =========================
+              内容区域
+          ========================= */
+
+      .content {
+        position: absolute;
+
+        top: 120px;
+
+        left: 50%;
+
+        transform: translateX(-50%);
+
+        display: flex;
+
+        flex-direction: column;
+
+        padding: 0 20mm;
+      }
+
+      /* =========================
+          每一行
+      ========================= */
+
+      .line {
+        display: flex;
+
+        height: fit-content;
+      }
+
+      /* =========================
+          格子
+      ========================= */
+
+      .cell {
+        flex-shrink: 0;
+
+        border-right: 1px solid #bfbfbf;
+
+        border-bottom: 1px solid #bfbfbf;
+
+        display: flex;
+
+        align-items: center;
+
+        justify-content: center;
+
+        text-align: center;
+
+        overflow: hidden;
+      }
+
+      .line .cell:first-child {
+        border-left: 1px solid #bfbfbf;
+      }
+
+      .line:first-child .cell {
+        border-top: 1px solid #bfbfbf;
+      }
+
+      /* =========================
+              打印
+          ========================= */
+
+      @media print {
+        * {
+          margin: 0;
+          padding: 0;
+        }
+
+        html,
+        body {
+          width: 100%;
+          height: 100%;
+          background: white;
+          margin: 0;
+          padding: 0;
+        }
+
+        @page {
+          size: A4;
+          margin: 0;
+        }
+
+        .toolbar {
+          display: none;
+        }
+
+        #pages {
+          display: block;
+          width: auto;
+          margin: 0;
+          padding: 0;
+        }
+
+        .paper {
+          box-shadow: none;
+          position: relative;
+          display: block;
+          width: 210mm;
+          height: 297mm;
+          margin: 0;
+          padding: 0;
+          page-break-after: auto;
+        }
+
+        .paper:not(:last-child) {
+          page-break-after: always;
+        }
+
+        .content {
+          padding: 0 15mm;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- =========================
+      控制面板
+========================= -->
+
+    <div class="toolbar">
+      <h2>作文稿纸生成器</h2>
+
+      <label>
+        作文标题
+        <input id="titleInput" value="狐假虎威新编" />
+      </label>
+
+      <label>
+        作文内容
+        <textarea id="contentInput" rows="12"></textarea>
+      </label>
+
+      <div class="row">
+        <div>
+          <label>
+            每页行数
+            <input id="linesPerPage" type="number" value="20" />
+          </label>
+        </div>
+
+        <div>
+          <label>
+            每行格子数
+            <input id="lineLength" type="number" value="15" />
+          </label>
+        </div>
+
+        <div>
+          <label>
+            格子大小(px)
+            <input id="cellSize" type="number" value="46" />
+          </label>
+        </div>
+
+        <div>
+          <label>
+            边框颜色
+            <input id="borderColor" type="color" value="#bfbfbf" />
+          </label>
+        </div>
+
+        <div>
+          <label>
+            字体颜色
+            <input id="fontColor" type="color" value="#000000" />
+          </label>
+        </div>
+
+        <div>
+          <label>
+            纸张颜色
+            <input id="paperColor" type="color" value="#ffffff" />
+          </label>
+        </div>
+      </div>
+
+      <button onclick="generate()">生成作文稿纸</button>
+      <button onclick="window.print()">打印作文稿纸</button>
+      <button
+        onclick="resetToDefault()"
+        style="
+          background: linear-gradient(135deg, #9e9e9e 0%, #757575 100%);
+          box-shadow: 0 4px 12px rgba(158, 158, 158, 0.3);
+        ">
+        恢复默认值
+      </button>
+    </div>
+
+    <!-- =========================
+      页面
+========================= -->
+
+    <div id="pages"></div>
+
+    <script>
+      // 作为内容例子
+      const exampleContent =
+        "自从老虎被狐狸骗了之后，就一直跟着狐狸，帮它做事。\n一天，狐狸让老虎给自己捕食。老虎就在小路旁边的草丛中趴了下来，等待时机。\n这时一只兔子跑了过来，老虎看准时机扑了过去，瞬间抓住了兔子。\n兔子一听，发现这不是上次跟在狐狸后面的那只老虎吗？\n于是，兔子对老虎说：“老虎大王，其实你被狐狸骗了。”\n老虎这才知道自己上当了，扑过去一口吃掉了狐狸。\n从此，老虎重新称霸了那片森林。";
+      document.getElementById("contentInput").value = exampleContent;
+      function generate() {
+        const title = document.getElementById("titleInput").value;
+
+        const rawText = document.getElementById("contentInput").value;
+
+        const linesPerPage = parseInt(document.getElementById("linesPerPage").value);
+
+        const lineLength = parseInt(document.getElementById("lineLength").value);
+
+        const cellSize = parseInt(document.getElementById("cellSize").value);
+
+        const borderColor = document.getElementById("borderColor").value;
+
+        const fontColor = document.getElementById("fontColor").value;
+
+        const paperColor = document.getElementById("paperColor").value;
+
+        const pages = document.getElementById("pages");
+
+        pages.innerHTML = "";
+
+        /* =========================
+          处理段落
+      ========================= */
+
+        const paragraphs = rawText
+          .split(/\n+/)
+          .map((p) => p.trim())
+          .filter((p) => p);
+
+        const chars = [];
+
+        paragraphs.forEach((p) => {
+          /* 首行缩进 */
+
+          chars.push("　");
+          chars.push("　");
+
+          for (let c of p) {
+            chars.push(c);
+          }
+
+          /* 段落结束 */
+
+          chars.push("\n");
+        });
+
+        /* =========================
+          自动分行
+      ========================= */
+
+        const allLines = [];
+
+        let currentLine = [];
+
+        for (let char of chars) {
+          if (char === "\n") {
+            allLines.push(currentLine);
+
+            currentLine = [];
+
+            continue;
+          }
+
+          currentLine.push(char);
+
+          if (currentLine.length >= lineLength) {
+            allLines.push(currentLine);
+
+            currentLine = [];
+          }
+        }
+
+        if (currentLine.length > 0) {
+          allLines.push(currentLine);
+        }
+
+        /* =========================
+          自动分页
+      ========================= */
+
+        const totalPages = Math.ceil(allLines.length / linesPerPage);
+
+        for (let p = 0; p < totalPages; p++) {
+          const paper = document.createElement("div");
+
+          paper.className = "paper";
+
+          paper.style.backgroundColor = paperColor;
+
+          paper.innerHTML = `
+          ${p === 0 ? `<div class="title" style="color: ${fontColor};">${title}</div>` : ``}
+
+          <div class="content"></div>
+
+          <div class="page-number" style="color: ${fontColor};">第 ${p + 1} 页</div>
+        `;
+
+          const content = paper.querySelector(".content");
+
+          const startLine = p * linesPerPage;
+
+          const pageLines = allLines.slice(startLine, startLine + linesPerPage);
+
+          /* =========================
+            当前页内容
+        ========================= */
+
+          for (let lineData of pageLines) {
+            const line = document.createElement("div");
+
+            line.className = "line";
+
+            for (let i = 0; i < lineLength; i++) {
+              const cell = document.createElement("div");
+
+              cell.className = "cell";
+
+              cell.style.width = cellSize + "px";
+
+              cell.style.height = cellSize + "px";
+
+              cell.style.fontSize = cellSize * 0.6 + "px";
+
+              cell.style.color = fontColor;
+
+              cell.style.borderRightColor = borderColor;
+
+              cell.style.borderBottomColor = borderColor;
+
+              cell.style.borderLeftColor = borderColor;
+
+              cell.style.borderTopColor = borderColor;
+
+              cell.textContent = lineData[i] || "";
+
+              line.appendChild(cell);
+            }
+
+            content.appendChild(line);
+          }
+
+          /* =========================
+            补空白行
+        ========================= */
+
+          for (let i = pageLines.length; i < linesPerPage; i++) {
+            const line = document.createElement("div");
+
+            line.className = "line";
+
+            for (let j = 0; j < lineLength; j++) {
+              const cell = document.createElement("div");
+
+              cell.className = "cell";
+
+              cell.style.width = cellSize + "px";
+
+              cell.style.height = cellSize + "px";
+
+              cell.style.borderRightColor = borderColor;
+
+              cell.style.borderBottomColor = borderColor;
+
+              cell.style.borderLeftColor = borderColor;
+
+              cell.style.borderTopColor = borderColor;
+
+              line.appendChild(cell);
+            }
+
+            content.appendChild(line);
+          }
+
+          pages.appendChild(paper);
+        }
+      }
+
+      /* 恢复默认值 */
+
+      function resetToDefault() {
+        document.getElementById("titleInput").value = "狐假虎威新编";
+        document.getElementById("contentInput").value = exampleContent;
+        document.getElementById("linesPerPage").value = 20;
+        document.getElementById("lineLength").value = 15;
+        document.getElementById("cellSize").value = 46;
+        document.getElementById("borderColor").value = "#bfbfbf";
+        document.getElementById("fontColor").value = "#000000";
+        document.getElementById("paperColor").value = "#ffffff";
+        generate();
+      }
+
+      /* 默认生成 */
+
+      generate();
+    </script>
+  </body>
+</html>
